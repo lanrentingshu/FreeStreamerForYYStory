@@ -189,7 +189,7 @@ Audio_Stream::~Audio_Stream()
     
 void Audio_Stream::open()
 {
-    if (m_currentPlaybackPosition.offset <= 0
+    if (m_currentPlaybackPosition.offset <= 0 /* if playback position exsit, open by that position */
         || m_currentPlaybackPosition.timePlayed <= 0
         || contentLength() <= 0) {
         open(0);
@@ -204,7 +204,7 @@ void Audio_Stream::open()
         } else if (byteOffset >= 1) {
             byteOffset = 1;
         }
-        setSeekOffset(byteOffset);
+        setSeekOffset(byteOffset);  /* do not forget to set offset */
     }
 }
 
@@ -909,7 +909,7 @@ void Audio_Stream::audioQueueInitializationFailed()
     
 void Audio_Stream::audioQueueFinishedPlayingPacket()
 {
-    m_currentPlaybackPosition = playbackPosition();
+    m_currentPlaybackPosition = playbackPosition(); /* record played position */
 }
     
 void Audio_Stream::streamIsReadyRead()
