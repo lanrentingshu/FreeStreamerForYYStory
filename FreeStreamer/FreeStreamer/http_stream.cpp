@@ -210,7 +210,10 @@ bool HTTP_Stream::open(const Input_Stream_Position& position)
     
     success = true;
     
-    if (success && m_reopenTimes < 5 && !m_errorDescription) { /* try reopen 5 times */
+    if (m_errorDescription) {
+        CFRelease(m_errorDescription); m_errorDescription = NULL;
+    }
+    if (success && m_reopenTimes < 5) { /* try reopen 5 times */
         m_reopenTimes ++;
         m_isReadedData = false;
         startOpenTimer(3); // 3s to detect if need reopen stream
@@ -343,7 +346,7 @@ void HTTP_Stream::handleStreamError()
         if (!m_delegate->streamHasDataCanPlay()) {
             m_delegate->streamErrorOccurred(reportedNetworkError);
         } else {
-            startOpenTimer(3);
+            startOpenTimer(2);
         }
     }
     
