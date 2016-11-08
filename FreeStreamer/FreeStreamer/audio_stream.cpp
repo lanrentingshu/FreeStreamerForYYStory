@@ -861,6 +861,15 @@ void Audio_Stream::audioQueueBuffersEmpty()
         // Create the watchdog in case the input stream gets stuck
         createWatchdogTimer();
         
+        // check if inputStream has error
+        if (m_inputStream) {
+            CFStringRef inputStreamError = m_inputStream->errorDescription();
+            if (inputStreamError) {
+                m_inputStream->close();
+                streamErrorOccurred(inputStreamError);
+            }
+        }
+        
         return;
     }
     
@@ -1094,6 +1103,11 @@ void Audio_Stream::streamEndEncountered()
         m_inputStream->close();
     }
     m_inputStreamRunning = false;
+}
+    
+bool Audio_Stream::streamHasDataCanPlay(){
+    bool canPlay = this->m_state == PLAYING || this->m_state == PAUSED;
+    return canPlay;
 }
 
 void Audio_Stream::streamErrorOccurred(CFStringRef errorDesc)

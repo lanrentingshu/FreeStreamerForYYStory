@@ -43,6 +43,8 @@ public:
     CFStringRef contentType();
     size_t contentLength();
     
+    CFStringRef errorDescription();
+    
     bool open();
     bool open(const Input_Stream_Position& position);
     void close();
@@ -62,6 +64,7 @@ public:
     void streamIsReadyRead();
     void streamHasBytesAvailable(UInt8 *data, UInt32 numBytes);
     void streamEndEncountered();
+    bool streamHasDataCanPlay();
     void streamErrorOccurred(CFStringRef errorDesc);
     void streamMetaDataAvailable(std::map<CFStringRef,CFStringRef> metaData);
     void streamMetaDataByteSizeAvailable(UInt32 sizeInBytes);
