@@ -11,7 +11,7 @@
 #include "id3_parser.h"
 #include "stream_configuration.h"
 
-#define HS_DEBUG 1
+//#define HS_DEBUG 1
 
 #if !defined (HS_DEBUG)
 #define HS_TRACE(...) do {} while (0)

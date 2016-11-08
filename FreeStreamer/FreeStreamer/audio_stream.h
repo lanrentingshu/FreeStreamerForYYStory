@@ -213,6 +213,7 @@ private:
     Audio_Queue *audioQueue();
     void closeAudioQueue();
     
+    void inputStreamOccurredError();
     void closeAndSignalError(int error, CFStringRef errorDescription);
     void setState(State state);
     void setCookiesForStream(AudioFileStreamID inAudioFileStream);

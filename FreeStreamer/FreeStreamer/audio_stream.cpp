@@ -819,6 +819,16 @@ void Audio_Stream::audioQueueBuffersEmpty()
         
         AS_WARN("Audio queue run out data, starting buffering\n");
         
+        // check if inputStream has error
+        if (m_inputStream) {
+            CFStringRef inputStreamError = m_inputStream->errorDescription();
+            if (inputStreamError) {
+                m_inputStream->close();
+                streamErrorOccurred(inputStreamError);
+                return;
+            }
+        }
+        
         setState(BUFFERING);
         
         if (m_firstBufferingTime == 0) {
@@ -860,15 +870,6 @@ void Audio_Stream::audioQueueBuffersEmpty()
         
         // Create the watchdog in case the input stream gets stuck
         createWatchdogTimer();
-        
-        // check if inputStream has error
-        if (m_inputStream) {
-            CFStringRef inputStreamError = m_inputStream->errorDescription();
-            if (inputStreamError) {
-                m_inputStream->close();
-                streamErrorOccurred(inputStreamError);
-            }
-        }
         
         return;
     }
