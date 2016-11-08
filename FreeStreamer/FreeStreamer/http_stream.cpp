@@ -227,7 +227,7 @@ void HTTP_Stream::openTimerCallback(CFRunLoopTimerRef timer, void *info)
         THIS->close(false);
         /* reopen from the error position */
         if ( THIS->m_position.end >= THIS->m_position.start+THIS->m_bytesRead) {
-            HS_TRACE("reopen debug: try reopen from HTTP stream error.");
+            HS_TRACE("reopen debug: try reopen from HTTP stream error.\n");
             Input_Stream_Position errorPosition;
             errorPosition.start = THIS->m_position.start+THIS->m_bytesRead;
             errorPosition.end = THIS->m_position.end;
