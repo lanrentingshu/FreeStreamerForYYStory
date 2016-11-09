@@ -479,11 +479,6 @@ void Audio_Stream::seekToOffset(float offset)
         return;
     }
     
-    if (m_inputStream->errorDescription()) {
-        // Do not allow seeking if inputStream occurred an error
-        return;
-    }
-    
     setState(SEEKING);
     
     m_originalContentLength = contentLength();
@@ -1482,7 +1477,13 @@ void Audio_Stream::seekTimerCallback(CFRunLoopTimerRef timer, void *info)
             
             pthread_mutex_unlock(&THIS->m_streamStateMutex);
             
-            THIS->setState(BUFFERING);
+            CFStringRef errString = THIS->m_inputStream->errorDescription();
+            if (errString) {
+                THIS->closeAndSignalError(AS_ERR_NETWORK, errString);
+                return;
+            } else {
+                THIS->setState(BUFFERING);
+            }
             
             THIS->m_inputStreamRunning = true;
             
