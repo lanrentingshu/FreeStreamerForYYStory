@@ -210,9 +210,6 @@ bool HTTP_Stream::open(const Input_Stream_Position& position)
     
     success = true;
     
-    if (m_errorDescription) {
-        CFRelease(m_errorDescription); m_errorDescription = NULL;
-    }
     if (success && m_reopenTimes < 5) { /* try reopen 5 times */
         m_reopenTimes ++;
         m_isReadedData = false;
@@ -887,6 +884,10 @@ void HTTP_Stream::readCallBack(CFReadStreamRef stream, CFStreamEventType eventTy
             /* did receive data */
             THIS->resetOpenTimer(true);
             THIS->m_isReadedData = true;
+            if (THIS->m_errorDescription) {
+                CFRelease(THIS->m_errorDescription); THIS->m_errorDescription = NULL;
+            }
+
             HS_TRACE("reopen debug: HTTP stream did receive data\n");
             
             if (!THIS->m_httpReadBuffer) {
