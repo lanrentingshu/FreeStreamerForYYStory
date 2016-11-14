@@ -125,6 +125,10 @@ Audio_Stream::Audio_Stream() :
     m_currentPlaybackPosition.offset = 0;
     m_currentPlaybackPosition.timePlayed = 0;
     
+    memset(&m_streamOpenPosition, 0, sizeof m_streamOpenPosition);
+    m_streamOpenPosition.start = 0;
+    m_streamOpenPosition.end = 0;
+    
     memset(&m_srcFormat, 0, sizeof m_srcFormat);
     
     memset(&m_dstFormat, 0, sizeof m_dstFormat);
@@ -249,12 +253,15 @@ void Audio_Stream::open(Input_Stream_Position *position)
     bool success = false;
     
     if (position) {
+        m_streamOpenPosition = *position;
         m_initialBufferingCompleted = false;
         
         if (m_inputStream) {
             success = m_inputStream->open(*position);
         }
     } else {
+        m_streamOpenPosition.start = 0;
+        m_streamOpenPosition.end = contentLength();
         m_initialBufferingCompleted = false;
         
         m_packetIdentifier = 0;
@@ -1498,6 +1505,9 @@ void Audio_Stream::seekTimerCallback(CFRunLoopTimerRef timer, void *info)
         // Found the packet from the cache, let's use the cache directly.
         
         pthread_mutex_lock(&THIS->m_packetQueueMutex);
+        SInt64 tempSeekDataSize = position.start - THIS->m_streamOpenPosition.start;
+        THIS->m_streamOpenPosition = position;
+        THIS->m_cachedDataSize -= tempSeekDataSize;
         THIS->m_playPacket    = seekPacket;
         pthread_mutex_unlock(&THIS->m_packetQueueMutex);
         THIS->m_discontinuity = true;
