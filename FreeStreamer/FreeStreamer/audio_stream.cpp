@@ -173,7 +173,8 @@ Audio_Stream::~Audio_Stream()
     if (m_contentType) {
         CFRelease(m_contentType), m_contentType = NULL;
     }
-    
+	
+    invalidateWatchdogTimer();
     close(true);
     
     delete [] m_outputBuffer, m_outputBuffer = 0;
