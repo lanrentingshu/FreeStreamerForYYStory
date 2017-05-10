@@ -73,6 +73,7 @@ public:
     UInt64 audioDataByteCount();
     float durationInSeconds();
     void seekToOffset(float offset);
+    float seekOffset();
     
     Input_Stream_Position streamPositionForOffset(float offset);
     
