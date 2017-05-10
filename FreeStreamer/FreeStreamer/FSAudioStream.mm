@@ -652,7 +652,7 @@ public:
         return offset;
     }
     
-    offset.position = _audioStream->playbackPosition().offset;
+    offset.position = _audioStream->seekOffset();
     
     astreamer::Input_Stream_Position httpStreamPos = _audioStream->streamPositionForOffset(offset.position);
     
