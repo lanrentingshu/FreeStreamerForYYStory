@@ -628,6 +628,12 @@ void Audio_Stream::setSeekOffset(float offset)
 {
     m_seekOffset = offset;
 }
+	
+float Audio_Stream::seekOffset()
+{
+    assert(pthread_main_np());
+    return m_seekOffset;
+}
  
 void Audio_Stream::setDefaultContentLength(UInt64 defaultContentLength)
 {
