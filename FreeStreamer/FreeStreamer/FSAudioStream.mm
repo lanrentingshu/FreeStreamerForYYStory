@@ -1814,12 +1814,12 @@ void AudioStreamStateObserver::audioStreamErrorOccurred(int errorCode, CFStringR
         priv.onFailure(error, errorForObjC);
     }
     
-    NSDictionary *userInfo = @{FSAudioStreamNotificationKey_Error: @(errorCode),
-                            FSAudioStreamNotificationKey_ErrorDescription: errorForObjC,
-                              FSAudioStreamNotificationKey_Stream: [NSValue valueWithPointer:source]};
-    NSNotification *notification = [NSNotification notificationWithName:FSAudioStreamErrorNotification object:priv.stream userInfo:userInfo];
+//    NSDictionary *userInfo = @{FSAudioStreamNotificationKey_Error: @(errorCode),
+//                            FSAudioStreamNotificationKey_ErrorDescription: errorForObjC,
+//                              FSAudioStreamNotificationKey_Stream: [NSValue valueWithPointer:source]};
+//    NSNotification *notification = [NSNotification notificationWithName:FSAudioStreamErrorNotification object:priv.stream userInfo:userInfo];
     
-    [[NSNotificationCenter defaultCenter] postNotification:notification];
+//    [[NSNotificationCenter defaultCenter] postNotification:notification];
     
     if (error == kFsAudioStreamErrorNetwork ||
         error == kFsAudioStreamErrorUnsupportedFormat ||
