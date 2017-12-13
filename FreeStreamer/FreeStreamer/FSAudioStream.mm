@@ -107,6 +107,8 @@ static NSInteger sortCacheObjects(id co1, id co2, void *keyForSorting)
 #else
         self.maxPrebufferedByteCount = 1000000; // 1 MB
 #endif
+        self.proxyHost = @"";
+        self.proxyPort = @(0);
         self.userAgent = [NSString stringWithFormat:@"FreeStreamer/%@ (%@)", freeStreamerReleaseVersion(), systemVersion];
         self.cacheEnabled = YES;
         self.seekingFromCacheEnabled = YES;
@@ -696,6 +698,14 @@ public:
     config.requireStrictContentTypeChecking = c->requireStrictContentTypeChecking;
     config.maxDiskCacheSize         = c->maxDiskCacheSize;
     
+    if (c->proxyHost) {
+        config.proxyHost = (__bridge_transfer NSString *)CFStringCreateCopy(kCFAllocatorDefault, c->proxyHost);
+    }
+    
+    if (c->proxyPort) {
+        config.proxyPort = (__bridge_transfer NSNumber *)c->proxyPort;
+    }
+    
     if (c->userAgent) {
         // Let the Objective-C side handle the memory for the copy of the original user-agent
         config.userAgent = (__bridge_transfer NSString *)CFStringCreateCopy(kCFAllocatorDefault, c->userAgent);
@@ -1192,7 +1202,7 @@ public:
 
 -(NSString *)description
 {
-    return [NSString stringWithFormat:@"[FreeStreamer %@] URL: %@\nbufferCount: %i\nbufferSize: %i\nmaxPacketDescs: %i\nhttpConnectionBufferSize: %i\noutputSampleRate: %f\noutputNumChannels: %ld\nbounceInterval: %i\nmaxBounceCount: %i\nstartupWatchdogPeriod: %i\nmaxPrebufferedByteCount: %i\nformat: %@\nbit rate: %f\nuserAgent: %@\ncacheDirectory: %@\npredefinedHttpHeaderValues: %@\ncacheEnabled: %@\nseekingFromCacheEnabled: %@\nautomaticAudioSessionHandlingEnabled: %@\nenableTimeAndPitchConversion: %@\nrequireStrictContentTypeChecking: %@\nmaxDiskCacheSize: %i\nusePrebufferSizeCalculationInSeconds: %@\nusePrebufferSizeCalculationInPackets: %@\nrequiredPrebufferSizeInSeconds: %f\nrequiredInitialPrebufferedByteCountForContinuousStream: %i\nrequiredInitialPrebufferedByteCountForNonContinuousStream: %i\nrequiredInitialPrebufferedPacketCount: %i",
+    return [NSString stringWithFormat:@"[FreeStreamer %@] URL: %@\nbufferCount: %i\nbufferSize: %i\nmaxPacketDescs: %i\nhttpConnectionBufferSize: %i\noutputSampleRate: %f\noutputNumChannels: %ld\nbounceInterval: %i\nmaxBounceCount: %i\nstartupWatchdogPeriod: %i\nmaxPrebufferedByteCount: %i\nformat: %@\nbit rate: %f\nproxyhost: %@\nproxyport: %@\nuserAgent: %@\ncacheDirectory: %@\npredefinedHttpHeaderValues: %@\ncacheEnabled: %@\nseekingFromCacheEnabled: %@\nautomaticAudioSessionHandlingEnabled: %@\nenableTimeAndPitchConversion: %@\nrequireStrictContentTypeChecking: %@\nmaxDiskCacheSize: %i\nusePrebufferSizeCalculationInSeconds: %@\nusePrebufferSizeCalculationInPackets: %@\nrequiredPrebufferSizeInSeconds: %f\nrequiredInitialPrebufferedByteCountForContinuousStream: %i\nrequiredInitialPrebufferedByteCountForNonContinuousStream: %i\nrequiredInitialPrebufferedPacketCount: %i",
             freeStreamerReleaseVersion(),
             self.url,
             self.configuration.bufferCount,
@@ -1207,6 +1217,8 @@ public:
             self.configuration.maxPrebufferedByteCount,
             self.formatDescription,
             self.bitRate,
+            self.configuration.proxyHost,
+            self.configuration.proxyPort,
             self.configuration.userAgent,
             self.configuration.cacheDirectory,
             self.configuration.predefinedHttpHeaderValues,
@@ -1285,6 +1297,16 @@ public:
         c->requiredInitialPrebufferedByteCountForNonContinuousStream = configuration.requiredInitialPrebufferedByteCountForNonContinuousStream;
         c->requiredPrebufferSizeInSeconds = configuration.requiredPrebufferSizeInSeconds;
         c->requiredInitialPrebufferedPacketCount = configuration.requiredInitialPrebufferedPacketCount;
+        
+        if (c->proxyHost) {
+            CFRelease(c->proxyHost);
+        }
+        c->proxyHost = CFStringCreateCopy(kCFAllocatorDefault, (__bridge CFStringRef)configuration.proxyHost);
+        
+        if (c->proxyPort) {
+            CFRelease(c->proxyPort);
+        }
+        c->proxyPort = (__bridge CFNumberRef)configuration.proxyPort;
         
         if (c->userAgent) {
             CFRelease(c->userAgent);

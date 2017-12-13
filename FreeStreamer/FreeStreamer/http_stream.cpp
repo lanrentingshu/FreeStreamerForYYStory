@@ -508,7 +508,48 @@ CFReadStreamRef HTTP_Stream::createReadStream(CFURLRef url)
                             kCFStreamPropertyHTTPShouldAutoredirect,
                             kCFBooleanTrue);
     
-    proxySettings = CFNetworkCopySystemProxySettings();
+    if (CFStringGetLength(config->proxyHost) > 0) {
+        
+        CFStringRef proxyKeys[2];
+        
+        CFStringRef httpsStr = CFSTR("https");
+        CFStringRef streamUrlStr = CFURLGetString(url);
+        
+        Boolean isHttps = CFStringFindWithOptions(streamUrlStr, httpsStr, CFRangeMake(0, CFStringGetLength(httpsStr)), kCFCompareCaseInsensitive, NULL);
+        
+        CFRelease(httpsStr); httpsStr = NULL;
+        
+        if(isHttps) {
+            proxyKeys[0] = kCFStreamPropertyHTTPSProxyHost;
+            proxyKeys[1] = kCFStreamPropertyHTTPSProxyPort;
+        } else {
+            proxyKeys[0] = kCFStreamPropertyHTTPProxyHost;
+            proxyKeys[1] = kCFStreamPropertyHTTPProxyPort;
+        }
+        
+        CFTypeRef proxyValues[2];
+        proxyValues[0] = config->proxyHost;
+        proxyValues[1] = config->proxyPort;
+        
+        CFMutableDictionaryRef mDict = NULL;
+        
+        if (proxySettings) {
+            mDict = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, proxySettings);
+            CFRelease(proxySettings);
+        } else {
+            mDict = CFDictionaryCreateMutable(NULL, 0, &kCFCopyStringDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+        }
+        
+        CFDictionarySetValue(mDict, proxyKeys[0], proxyValues[0]);
+        CFDictionarySetValue(mDict, proxyKeys[1], proxyValues[1]);
+        
+        proxySettings = CFDictionaryCreateCopy(kCFAllocatorDefault, mDict);
+        
+        CFRelease(mDict); mDict = NULL;
+    } else {
+        proxySettings = CFNetworkCopySystemProxySettings();
+    }
+    
     if (proxySettings) {
         CFReadStreamSetProperty(readStream, kCFStreamPropertyHTTPProxy, proxySettings);
         CFRelease(proxySettings);

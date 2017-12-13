@@ -11,6 +11,8 @@
 namespace astreamer {
     
 Stream_Configuration::Stream_Configuration() :
+    proxyHost(NULL),
+    proxyPort(NULL),
     userAgent(NULL),
     cacheDirectory(NULL),
     predefinedHttpHeaderValues(NULL)
@@ -21,6 +23,12 @@ Stream_Configuration::~Stream_Configuration()
 {
     if (userAgent) {
         CFRelease(userAgent), userAgent = NULL;
+    }
+    if (proxyHost) {
+        CFRelease(proxyHost), proxyHost = NULL;
+    }
+    if (proxyPort) {
+        CFRelease(proxyPort), proxyPort = NULL;
     }
 }
 

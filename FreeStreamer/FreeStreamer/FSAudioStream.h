@@ -247,6 +247,16 @@ typedef struct {
  * Require buffering of this many packets before the playback can start.
  */
 @property (nonatomic,assign) int      requiredInitialPrebufferedPacketCount;
+
+/**
+ * The HTTP proxy host used for stream operations.
+ */
+@property (nonatomic,strong) NSString *proxyHost;
+/**
+ * The HTTP proxy port used for stream operations.
+ */
+@property (nonatomic,strong) NSNumber *proxyPort;
+
 /**
  * The HTTP user agent used for stream operations.
  */

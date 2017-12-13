@@ -30,6 +30,10 @@ struct Stream_Configuration {
     int requiredInitialPrebufferedByteCountForNonContinuousStream;
     int requiredPrebufferSizeInSeconds;
     int requiredInitialPrebufferedPacketCount;
+    
+    CFStringRef proxyHost;
+    CFNumberRef proxyPort;
+    
     CFStringRef userAgent;
     CFStringRef cacheDirectory;
     CFDictionaryRef predefinedHttpHeaderValues;
