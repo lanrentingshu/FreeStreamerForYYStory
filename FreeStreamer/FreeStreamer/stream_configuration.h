@@ -34,6 +34,9 @@ struct Stream_Configuration {
     CFStringRef proxyHost;
     CFNumberRef proxyPort;
     
+    int startReadDataTimeout;
+    int continueReadDataTimeout;
+    
     CFStringRef userAgent;
     CFStringRef cacheDirectory;
     CFDictionaryRef predefinedHttpHeaderValues;

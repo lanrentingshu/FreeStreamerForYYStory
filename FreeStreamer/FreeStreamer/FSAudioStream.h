@@ -257,6 +257,11 @@ typedef struct {
  */
 @property (nonatomic,strong) NSNumber *proxyPort;
 
+//连接的首次获取数据超时时间
+@property (nonatomic,assign) int startReadDataTimeout;
+//连接非首次获取数据超时时间
+@property (nonatomic,assign) int continueReadDataTimeout;
+
 /**
  * The HTTP user agent used for stream operations.
  */

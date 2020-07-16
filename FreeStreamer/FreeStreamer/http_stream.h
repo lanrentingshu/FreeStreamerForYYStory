@@ -34,14 +34,11 @@ private:
     bool m_scheduledInRunLoop;
     bool m_readPending;
     CFRunLoopTimerRef m_openTimer;
-    size_t m_reopenTimes;
-    bool m_isReadedData;
     Input_Stream_Position m_position;
     
     /* HTTP headers */
     bool m_httpHeadersParsed;
     CFStringRef m_contentType;
-    CFStringRef m_errorDescription; // record error
     size_t m_contentLength;
     UInt64 m_bytesRead;
     
@@ -75,7 +72,7 @@ private:
     static void openTimerCallback(CFRunLoopTimerRef timer, void *info);
     
     void startOpenTimer(CFTimeInterval interval);  //start open timer
-    void resetOpenTimer(bool needResetReadedFlag); //invalidate timer
+    void stopOpenTimer();                         //invalidate timer
     void close(bool resetTimer);                   //close stream if need invalidate timer
     void handleStreamError();                      //handle stream error
     

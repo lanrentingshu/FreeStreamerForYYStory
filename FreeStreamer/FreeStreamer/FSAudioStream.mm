@@ -77,30 +77,16 @@ static NSInteger sortCacheObjects(id co1, id co2, void *keyForSorting)
 #else
         [systemVersion appendString:@"OS X"];
 #endif
-
-#if (TARGET_OS_SIMULATOR)
-        /* Seems that audio doesn't run properly with lower latency buffers on the simulator
-           with later Xcode / iOS Simulator versions */
-        self.bufferCount    = 8;
-        self.bufferSize     = 32768;
         
-    #if (DEBUG)
-        static dispatch_once_t once;
-        dispatch_once(&once, ^{
-            NSLog(@"Notice: FreeStreamer running on simulator, low latency audio not available!");
-        });
-    #endif
-#else
         self.bufferCount    = 64;
         self.bufferSize     = 8192;
-#endif
         self.maxPacketDescs = 512;
         self.httpConnectionBufferSize = 8192;
         self.outputSampleRate = 44100;
         self.outputNumChannels = 2;
         self.bounceInterval    = 10;
         self.maxBounceCount    = 4;   // Max number of bufferings in bounceInterval seconds
-        self.startupWatchdogPeriod = 30; // If the stream doesn't start to play in this seconds, the watchdog will fail it
+        self.startupWatchdogPeriod = 60; // If the stream doesn't start to play in this seconds, the watchdog will fail it
 #ifdef __LP64__
         /* Increase the max in-memory cache to 10 MB with newer 64 bit devices */
         self.maxPrebufferedByteCount = 10000000; // 10 MB
@@ -109,6 +95,8 @@ static NSInteger sortCacheObjects(id co1, id co2, void *keyForSorting)
 #endif
         self.proxyHost = @"";
         self.proxyPort = @(0);
+        self.startReadDataTimeout = 15;
+        self.continueReadDataTimeout = 20;
         self.userAgent = [NSString stringWithFormat:@"FreeStreamer/%@ (%@)", freeStreamerReleaseVersion(), systemVersion];
         self.cacheEnabled = YES;
         self.seekingFromCacheEnabled = YES;
@@ -371,8 +359,8 @@ public:
     
     _delegate = nil;
     
-    delete _audioStream, _audioStream = nil;
-    delete _observer, _observer = nil;
+    delete _audioStream; _audioStream = nil;
+    delete _observer; _observer = nil;
     
     // Clean up the disk cache.
     
@@ -697,6 +685,9 @@ public:
     config.enableTimeAndPitchConversion = c->enableTimeAndPitchConversion;
     config.requireStrictContentTypeChecking = c->requireStrictContentTypeChecking;
     config.maxDiskCacheSize         = c->maxDiskCacheSize;
+    
+    config.startReadDataTimeout = c->startReadDataTimeout;
+    config.continueReadDataTimeout = c->continueReadDataTimeout;
     
     if (c->proxyHost) {
         config.proxyHost = (__bridge_transfer NSString *)CFStringCreateCopy(kCFAllocatorDefault, c->proxyHost);
@@ -1067,7 +1058,7 @@ public:
     
     [self endBackgroundTask];
     
-    [_reachability stopNotifier], _reachability = nil;
+    [_reachability stopNotifier]; _reachability = nil;
 }
 
 - (BOOL)isPlaying
@@ -1202,7 +1193,7 @@ public:
 
 -(NSString *)description
 {
-    return [NSString stringWithFormat:@"[FreeStreamer %@] URL: %@\nbufferCount: %i\nbufferSize: %i\nmaxPacketDescs: %i\nhttpConnectionBufferSize: %i\noutputSampleRate: %f\noutputNumChannels: %ld\nbounceInterval: %i\nmaxBounceCount: %i\nstartupWatchdogPeriod: %i\nmaxPrebufferedByteCount: %i\nformat: %@\nbit rate: %f\nproxyhost: %@\nproxyport: %@\nuserAgent: %@\ncacheDirectory: %@\npredefinedHttpHeaderValues: %@\ncacheEnabled: %@\nseekingFromCacheEnabled: %@\nautomaticAudioSessionHandlingEnabled: %@\nenableTimeAndPitchConversion: %@\nrequireStrictContentTypeChecking: %@\nmaxDiskCacheSize: %i\nusePrebufferSizeCalculationInSeconds: %@\nusePrebufferSizeCalculationInPackets: %@\nrequiredPrebufferSizeInSeconds: %f\nrequiredInitialPrebufferedByteCountForContinuousStream: %i\nrequiredInitialPrebufferedByteCountForNonContinuousStream: %i\nrequiredInitialPrebufferedPacketCount: %i",
+    return [NSString stringWithFormat:@"[FreeStreamer %@] URL: %@\nbufferCount: %i\nbufferSize: %i\nmaxPacketDescs: %i\nhttpConnectionBufferSize: %i\noutputSampleRate: %f\noutputNumChannels: %ld\nbounceInterval: %i\nmaxBounceCount: %i\nstartupWatchdogPeriod: %i\nmaxPrebufferedByteCount: %i\nformat: %@\nbit rate: %f\nproxyhost: %@\nproxyport: %@\nstartReadDataTimeout: %i\ncontinueReadDataTimeout: %i\nuserAgent: %@\ncacheDirectory: %@\npredefinedHttpHeaderValues: %@\ncacheEnabled: %@\nseekingFromCacheEnabled: %@\nautomaticAudioSessionHandlingEnabled: %@\nenableTimeAndPitchConversion: %@\nrequireStrictContentTypeChecking: %@\nmaxDiskCacheSize: %i\nusePrebufferSizeCalculationInSeconds: %@\nusePrebufferSizeCalculationInPackets: %@\nrequiredPrebufferSizeInSeconds: %f\nrequiredInitialPrebufferedByteCountForContinuousStream: %i\nrequiredInitialPrebufferedByteCountForNonContinuousStream: %i\nrequiredInitialPrebufferedPacketCount: %i",
             freeStreamerReleaseVersion(),
             self.url,
             self.configuration.bufferCount,
@@ -1219,6 +1210,8 @@ public:
             self.bitRate,
             self.configuration.proxyHost,
             self.configuration.proxyPort,
+            self.configuration.startReadDataTimeout,
+            self.configuration.continueReadDataTimeout,
             self.configuration.userAgent,
             self.configuration.cacheDirectory,
             self.configuration.predefinedHttpHeaderValues,
@@ -1297,6 +1290,8 @@ public:
         c->requiredInitialPrebufferedByteCountForNonContinuousStream = configuration.requiredInitialPrebufferedByteCountForNonContinuousStream;
         c->requiredPrebufferSizeInSeconds = configuration.requiredPrebufferSizeInSeconds;
         c->requiredInitialPrebufferedPacketCount = configuration.requiredInitialPrebufferedPacketCount;
+        c->startReadDataTimeout = configuration.startReadDataTimeout;
+        c->continueReadDataTimeout = configuration.continueReadDataTimeout;
         
         if (c->proxyHost) {
             CFRelease(c->proxyHost);
@@ -1843,6 +1838,7 @@ void AudioStreamStateObserver::audioStreamErrorOccurred(int errorCode, CFStringR
     
 //    [[NSNotificationCenter defaultCenter] postNotification:notification];
     
+    /*
     if (error == kFsAudioStreamErrorNetwork ||
         error == kFsAudioStreamErrorUnsupportedFormat ||
         error == kFsAudioStreamErrorOpen ||
@@ -1852,6 +1848,7 @@ void AudioStreamStateObserver::audioStreamErrorOccurred(int errorCode, CFStringR
             [priv attemptRestart];
         }
     }
+     */
 }
     
 void AudioStreamStateObserver::audioStreamStateChanged(astreamer::Audio_Stream::State state)

@@ -873,18 +873,9 @@ void Audio_Stream::audioQueueBuffersEmpty()
         
         AS_WARN("Audio queue run out data, starting buffering\n");
         
-        // check if inputStream has error
-        if (m_inputStream) {
-            CFStringRef inputStreamError = m_inputStream->errorDescription();
-            if (inputStreamError) {
-                m_inputStream->close();
-                streamErrorOccurred(inputStreamError);
-                return;
-            }
-        }
-        
         setState(BUFFERING);
         
+        /*
         if (m_firstBufferingTime == 0) {
             // Never buffered, just increase the counter
             m_firstBufferingTime = CFAbsoluteTimeGetCurrent();
@@ -921,6 +912,7 @@ void Audio_Stream::audioQueueBuffersEmpty()
                 CFRelease(errorDescription);
             }
         }
+         */
         
         // Create the watchdog in case the input stream gets stuck
         createWatchdogTimer();
@@ -1021,7 +1013,7 @@ void Audio_Stream::streamIsReadyRead()
             errorDescription = CFStringCreateCopy(kCFAllocatorDefault, CFSTR("Strict content type checking active, no content type provided by the server"));
         }
         
-        closeAndSignalError(AS_ERR_OPEN, errorDescription);
+        closeAndSignalError(AS_ERR_UNSUPPORTED_FORMAT, errorDescription);
         if (errorDescription) {
             CFRelease(errorDescription);
         }
@@ -1153,7 +1145,7 @@ void Audio_Stream::streamEndEncountered()
     if (!(contentLength() > 0)) {
         /* Continuous streams are not supposed to end */
         
-        closeAndSignalError(AS_ERR_NETWORK, CFSTR("Stream ended abruptly"));
+        closeAndSignalError(AS_ERR_NETWORK, CFSTR("内容为空-HTTPErrorCode-3000"));
         
         return;
     }
@@ -1526,16 +1518,7 @@ void Audio_Stream::seekTimerCallback(CFRunLoopTimerRef timer, void *info)
         THIS->m_converterRunOutOfData = false;
         THIS->m_discontinuity = true;
         
-        // check if inputStream has error
-        if (THIS->m_inputStream) {
-            CFStringRef errString = THIS->m_inputStream->errorDescription();
-            if (errString) {
-                THIS->m_inputStream->close();
-                THIS->closeAndSignalError(AS_ERR_NETWORK, errString);
-                return;
-            }
-        }
-        
+        THIS->m_inputStream->close();
         bool success = THIS->m_inputStream->open(position);
         
         if (success) {
