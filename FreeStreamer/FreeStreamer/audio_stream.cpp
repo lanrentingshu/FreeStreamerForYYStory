@@ -153,11 +153,27 @@ Audio_Stream::Audio_Stream() :
     }
     
     pthread_create(&m_decodeThread, NULL, decodeLoop, this);
-    pthread_detach(m_decodeThread);
+//    pthread_detach(m_decodeThread);
 }
 
 Audio_Stream::~Audio_Stream()
 {
+    if (m_audioQueue) {
+        m_audioQueue->stop();
+    }
+
+    //确保m_decodeRunLoop有值, 避免pthread_join回收线程无限等待, 出现卡死现象
+    CFRunLoopRef temp = NULL;
+    while (!temp) {
+        pthread_mutex_lock(&m_streamStateMutex);
+        
+        temp = m_decodeRunLoop;
+        
+        pthread_mutex_unlock(&m_streamStateMutex);
+        
+    }
+    temp = NULL;
+    
     pthread_mutex_lock(&m_streamStateMutex);
     m_decoderShouldRun = false;
     
@@ -166,6 +182,12 @@ Audio_Stream::~Audio_Stream()
     }
     
     pthread_mutex_unlock(&m_streamStateMutex);
+    
+    if (m_decodeThread) {
+        pthread_cancel(m_decodeThread);
+        pthread_join(m_decodeThread, NULL);
+        m_decodeThread = NULL;
+    }
     
     if (m_defaultContentType) {
         CFRelease(m_defaultContentType); m_defaultContentType = NULL;
@@ -1612,6 +1634,12 @@ void Audio_Stream::decodeSinglePacket(CFRunLoopTimerRef timer, void *info)
     Audio_Stream *THIS = (Audio_Stream *)info;
     
     pthread_mutex_lock(&THIS->m_streamStateMutex);
+    
+    if (THIS->m_decodeRunLoop == NULL) {
+        CFRunLoopTimerInvalidate(timer);
+        pthread_mutex_unlock(&THIS->m_streamStateMutex);
+        return;
+    }
     
     THIS->m_decoderActive = true;
     
