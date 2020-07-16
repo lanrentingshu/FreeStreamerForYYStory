@@ -158,7 +158,7 @@ bool HTTP_Stream::open(const Input_Stream_Position& position)
     m_httpHeadersParsed = false;
     
     if (m_contentType) {
-        CFRelease(m_contentType), m_contentType = NULL;
+        CFRelease(m_contentType); m_contentType = NULL;
     }
     
     m_icyStream = false;
@@ -167,7 +167,7 @@ bool HTTP_Stream::open(const Input_Stream_Position& position)
     m_icyHeadersParsed = false;
     
     if (m_icyName) {
-        CFRelease(m_icyName), m_icyName = 0;
+        CFRelease(m_icyName); m_icyName = 0;
     }
     
     for (std::vector<CFStringRef>::iterator h = m_icyHeaderLines.begin(); h != m_icyHeaderLines.end(); ++h) {
@@ -192,7 +192,7 @@ bool HTTP_Stream::open(const Input_Stream_Position& position)
     if (!CFReadStreamSetClient(m_readStream, kCFStreamEventHasBytesAvailable |
 	                                         kCFStreamEventEndEncountered |
 	                                         kCFStreamEventErrorOccurred, readCallBack, &CTX)) {
-        CFRelease(m_readStream), m_readStream = 0;
+        CFRelease(m_readStream); m_readStream = 0;
         goto out;
     }
     
@@ -203,7 +203,7 @@ bool HTTP_Stream::open(const Input_Stream_Position& position)
         CFReadStreamSetClient(m_readStream, 0, NULL, NULL);
         setScheduledInRunLoop(false);
         if (m_readStream) {
-            CFRelease(m_readStream), m_readStream = 0;
+            CFRelease(m_readStream); m_readStream = 0;
         }
         goto out;
     }
