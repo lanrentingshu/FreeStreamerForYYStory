@@ -119,6 +119,7 @@ Audio_Stream::Audio_Stream() :
     m_decoderShouldRun(false),
     m_decoderFailed(false),
     m_decoderActive(false),
+    m_finishLoadFile(false),
     m_mainRunLoop(CFRunLoopGetCurrent()),
     m_decodeRunLoop(NULL)
 {
@@ -746,7 +747,7 @@ size_t Audio_Stream::cachedDataSize()
 {
     size_t dataSize = 0;
     pthread_mutex_lock(&m_packetQueueMutex);
-    dataSize = m_cachedDataSize;
+    dataSize = m_finishLoadFile?contentLength():m_cachedDataSize;
     pthread_mutex_unlock(&m_packetQueueMutex);
     return dataSize;
 }
@@ -1319,6 +1320,16 @@ void Audio_Stream::setState(State state)
     }
 #endif
     
+    if (state == SEEKING) {
+        pthread_mutex_lock(&m_packetQueueMutex);
+        m_finishLoadFile = false;
+        pthread_mutex_unlock(&m_packetQueueMutex);
+    } else if (state == END_OF_FILE) {
+        pthread_mutex_lock(&m_packetQueueMutex);
+        m_finishLoadFile = true;
+        pthread_mutex_unlock(&m_packetQueueMutex);
+    }
+    
     m_state = state;
     
     pthread_mutex_unlock(&m_streamStateMutex);
@@ -1546,7 +1557,16 @@ void Audio_Stream::seekTimerCallback(CFRunLoopTimerRef timer, void *info)
         pthread_mutex_lock(&THIS->m_packetQueueMutex);
         SInt64 tempSeekDataSize = position.start - THIS->m_streamOpenPosition.start;
         THIS->m_streamOpenPosition = position;
-        THIS->m_cachedDataSize -= tempSeekDataSize;
+        
+//        THIS->m_cachedDataSize -= tempSeekDataSize;
+        // avoid overflow
+        if (THIS->m_cachedDataSize >= tempSeekDataSize) {
+            THIS->m_cachedDataSize -= tempSeekDataSize;
+        } else {
+            THIS->m_cachedDataSize = 0;
+        }
+        assert(THIS->m_cachedDataSize<=THIS->contentLength() || THIS->contentLength() == 0);
+        
         THIS->m_playPacket    = seekPacket;
         pthread_mutex_unlock(&THIS->m_packetQueueMutex);
         THIS->m_discontinuity = true;
@@ -2043,7 +2063,15 @@ void Audio_Stream::cleanupCachedData()
         
         queued_packet_t *tmp = cur->next;
         
-        m_cachedDataSize -= cur->desc.mDataByteSize;
+//        m_cachedDataSize -= cur->desc.mDataByteSize;
+        
+        // avoid overflow
+        if (m_cachedDataSize >= cur->desc.mDataByteSize) {
+            m_cachedDataSize -= cur->desc.mDataByteSize;
+        } else {
+            m_cachedDataSize = 0;
+        }
+        assert(m_cachedDataSize<=contentLength() || contentLength() == 0);
         
         free(cur);
         cur = tmp;

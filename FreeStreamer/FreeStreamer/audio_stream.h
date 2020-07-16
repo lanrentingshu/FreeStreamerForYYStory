@@ -204,6 +204,8 @@ private:
     bool m_decoderFailed;
     bool m_decoderActive;
     
+    bool m_finishLoadFile;
+    
     pthread_mutex_t m_packetQueueMutex;
     pthread_mutex_t m_streamStateMutex;
     
