@@ -44,6 +44,7 @@ Audio_Queue::Audio_Queue()
     m_packetsFilled(0),
     m_buffersUsed(0),
     m_audioQueueStarted(false),
+    m_bufferDiscarded(false),
     m_levelMeteringEnabled(false),
     m_lastError(noErr),
     m_initialOutputVolume(1.0)
@@ -187,6 +188,7 @@ void Audio_Queue::stop(bool stopImmediately)
     m_levelMeteringEnabled = false;
     
     pthread_mutex_lock(&m_bufferInUseMutex);
+    m_bufferDiscarded = true;
     pthread_cond_signal(&m_bufferFreeCondition);
     pthread_mutex_unlock(&m_bufferInUseMutex);
     
@@ -448,6 +450,11 @@ void Audio_Queue::enqueueBuffer()
     
     pthread_mutex_lock(&m_bufferInUseMutex);
     
+    if (m_bufferDiscarded) {
+        pthread_mutex_unlock(&m_bufferInUseMutex);
+        return;
+    }
+    
     m_bufferInUse[m_fillBufferIndex] = true;
     m_buffersUsed++;
     
@@ -483,7 +490,7 @@ void Audio_Queue::enqueueBuffer()
     
     // wait until next buffer is not in use
     
-    while (m_bufferInUse[m_fillBufferIndex]) {
+    while (!m_bufferDiscarded && m_bufferInUse && m_bufferInUse[m_fillBufferIndex]) {
         AQ_TRACE("waiting for buffer %u\n", (unsigned int)m_fillBufferIndex);
         
         pthread_cond_wait(&m_bufferFreeCondition, &m_bufferInUseMutex);

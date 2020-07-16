@@ -66,6 +66,9 @@ private:
     UInt32 m_buffersUsed;                                            // how many buffers are used
     
     bool m_audioQueueStarted;                                        // flag to indicate that the queue has been started
+    
+    bool m_bufferDiscarded;                                        // flag to indicate that the queue has been stoped, means about to dealloc
+    
     bool *m_bufferInUse;                                  // flags to indicate that a buffer is still in use
     bool m_levelMeteringEnabled;
     
