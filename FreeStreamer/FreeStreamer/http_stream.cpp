@@ -88,20 +88,20 @@ HTTP_Stream::~HTTP_Stream()
     }
     
     if (m_icyName) {
-        CFRelease(m_icyName), m_icyName = 0;
+        CFRelease(m_icyName); m_icyName = 0;
     }
     
     if (m_httpReadBuffer) {
-        delete [] m_httpReadBuffer, m_httpReadBuffer = 0;
+        delete [] m_httpReadBuffer; m_httpReadBuffer = 0;
     }
     if (m_icyReadBuffer) {
-        delete [] m_icyReadBuffer, m_icyReadBuffer = 0;
+        delete [] m_icyReadBuffer; m_icyReadBuffer = 0;
     }
     if (m_url) {
-        CFRelease(m_url), m_url = 0;
+        CFRelease(m_url); m_url = 0;
     }
     
-    delete m_id3Parser, m_id3Parser = 0;
+    delete m_id3Parser; m_id3Parser = 0;
 }
     
 Input_Stream_Position HTTP_Stream::position()
@@ -727,7 +727,7 @@ void HTTP_Stream::parseICYStream(const UInt8 *buf, const CFIndex bufSize)
                                            CFRangeMake(0, icyContenTypeHeaderLength),
                                            0) == kCFCompareEqualTo) {
                 if (m_contentType) {
-                    CFRelease(m_contentType), m_contentType = 0;
+                    CFRelease(m_contentType); m_contentType = 0;
                 }
                 m_contentType = CFStringCreateWithSubstring(kCFAllocatorDefault,
                                                             line,

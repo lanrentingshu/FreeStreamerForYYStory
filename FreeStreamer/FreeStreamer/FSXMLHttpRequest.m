@@ -101,7 +101,7 @@
                          
                          [strongSelf parseResponseData];
                          
-                         xmlFreeDoc(strongSelf->_xmlDocument), strongSelf->_xmlDocument = nil;
+                         xmlFreeDoc(strongSelf->_xmlDocument); strongSelf->_xmlDocument = nil;
                          
                          dispatch_async(dispatch_get_main_queue(), ^(){
                              strongSelf.onCompletion();

@@ -170,13 +170,13 @@ ID3_Parser_Private::ID3_Parser_Private() :
 ID3_Parser_Private::~ID3_Parser_Private()
 {
     if (m_performer) {
-        CFRelease(m_performer), m_performer = NULL;
+        CFRelease(m_performer); m_performer = NULL;
     }
     if (m_title) {
-        CFRelease(m_title), m_title = NULL;
+        CFRelease(m_title); m_title = NULL;
     }
     if (m_coverArt) {
-        CFRelease(m_coverArt), m_coverArt = NULL;
+        CFRelease(m_coverArt); m_coverArt = NULL;
     }
 }
     
@@ -470,13 +470,13 @@ void ID3_Parser_Private::reset()
     m_usesExtendedHeader = false;
     
     if (m_title) {
-        CFRelease(m_title), m_title = NULL;
+        CFRelease(m_title); m_title = NULL;
     }
     if (m_performer) {
-        CFRelease(m_performer), m_performer = NULL;
+        CFRelease(m_performer); m_performer = NULL;
     }
     if (m_coverArt) {
-        CFRelease(m_coverArt), m_coverArt = NULL;
+        CFRelease(m_coverArt); m_coverArt = NULL;
     }
     
     m_tagData.clear();
@@ -508,7 +508,7 @@ ID3_Parser::ID3_Parser() :
 
 ID3_Parser::~ID3_Parser()
 {
-    delete m_private, m_private = 0;
+    delete m_private; m_private = 0;
 }
 
 void ID3_Parser::reset()

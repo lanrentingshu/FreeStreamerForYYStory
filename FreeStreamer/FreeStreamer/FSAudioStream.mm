@@ -1566,7 +1566,7 @@ public:
         unsigned u = pos.playbackTimeInSeconds;
         unsigned s,m;
     
-        s = u % 60, u /= 60;
+        s = u % 60; u /= 60;
         m = u;
     
         pos.minute = m;
@@ -1593,7 +1593,7 @@ public:
     
         unsigned s,m;
     
-        s = u % 60, u /= 60;
+        s = u % 60; u /= 60;
         m = u;
         
         pos.minute = m;

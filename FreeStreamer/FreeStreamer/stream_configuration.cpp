@@ -22,13 +22,13 @@ Stream_Configuration::Stream_Configuration() :
 Stream_Configuration::~Stream_Configuration()
 {
     if (userAgent) {
-        CFRelease(userAgent), userAgent = NULL;
+        CFRelease(userAgent); userAgent = NULL;
     }
     if (proxyHost) {
-        CFRelease(proxyHost), proxyHost = NULL;
+        CFRelease(proxyHost); proxyHost = NULL;
     }
     if (proxyPort) {
-        CFRelease(proxyPort), proxyPort = NULL;
+        CFRelease(proxyPort); proxyPort = NULL;
     }
 }
 

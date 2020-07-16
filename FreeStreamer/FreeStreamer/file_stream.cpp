@@ -28,14 +28,14 @@ File_Stream::~File_Stream()
     close();
     
     if (m_fileReadBuffer) {
-        delete [] m_fileReadBuffer, m_fileReadBuffer = 0;
+        delete [] m_fileReadBuffer; m_fileReadBuffer = 0;
     }
     
     if (m_url) {
-        CFRelease(m_url), m_url = 0;
+        CFRelease(m_url); m_url = 0;
     }
     
-    delete m_id3Parser, m_id3Parser = 0;
+    delete m_id3Parser; m_id3Parser = 0;
     
     if (m_contentType) {
         CFRelease(m_contentType);
@@ -112,7 +112,7 @@ done:
 void File_Stream::setContentType(CFStringRef contentType)
 {
     if (m_contentType) {
-        CFRelease(m_contentType), m_contentType = 0;
+        CFRelease(m_contentType); m_contentType = 0;
     }
     if (contentType) {
         m_contentType = CFStringCreateCopy(kCFAllocatorDefault, contentType);
@@ -184,7 +184,7 @@ bool File_Stream::open(const Input_Stream_Position& position)
     if (!CFReadStreamSetClient(m_readStream, kCFStreamEventHasBytesAvailable |
                                kCFStreamEventEndEncountered |
                                kCFStreamEventErrorOccurred, readCallBack, &CTX)) {
-        CFRelease(m_readStream), m_readStream = 0;
+        CFRelease(m_readStream); m_readStream = 0;
         goto out;
     }
     
@@ -195,7 +195,7 @@ bool File_Stream::open(const Input_Stream_Position& position)
         CFReadStreamSetClient(m_readStream, 0, NULL, NULL);
         setScheduledInRunLoop(false);
         if (m_readStream) {
-            CFRelease(m_readStream), m_readStream = 0;
+            CFRelease(m_readStream); m_readStream = 0;
         }
         goto out;
     }
@@ -222,7 +222,7 @@ void File_Stream::close()
     CFReadStreamSetClient(m_readStream, 0, NULL, NULL);
     setScheduledInRunLoop(false);
     CFReadStreamClose(m_readStream);
-    CFRelease(m_readStream), m_readStream = 0;
+    CFRelease(m_readStream); m_readStream = 0;
 }
     
 void File_Stream::setScheduledInRunLoop(bool scheduledInRunLoop)
