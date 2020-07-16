@@ -152,9 +152,19 @@ size_t Caching_Stream::contentLength()
     }
 }
     
-CFStringRef Caching_Stream::errorDescription()
+long Caching_Stream::attachErrorCode()
 {
-    return NULL;
+    return 0;
+}
+
+void Caching_Stream::netWorkChange(Input_Stream_Network status)
+{
+    
+}
+    
+void Caching_Stream::playStateChange(bool isBuffer)
+{
+    
 }
     
 bool Caching_Stream::open()
@@ -409,10 +419,6 @@ void Caching_Stream::streamEndEncountered()
     if (m_delegate) {
         m_delegate->streamEndEncountered();
     }
-}
-    
-bool Caching_Stream::streamHasDataCanPlay(){
-    return m_delegate->streamHasDataCanPlay();
 }
     
 void Caching_Stream::streamErrorOccurred(CFStringRef errorDesc)

@@ -135,9 +135,19 @@ size_t File_Stream::contentLength()
     return 0;
 }
     
-CFStringRef File_Stream::errorDescription()
+long File_Stream::attachErrorCode()
 {
-    return NULL;
+    return 0;
+}
+    
+void File_Stream::netWorkChange(Input_Stream_Network status)
+{
+    
+}
+    
+void File_Stream::playStateChange(bool isBuffer)
+{
+    
 }
     
 bool File_Stream::open()

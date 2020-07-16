@@ -412,7 +412,7 @@ NSString*             freeStreamerReleaseVersion();
  * Otherwise (the stream is paused), calling pause will continue the playback.
  */
 - (void)pause;
-
+- (void)resume;
 /**
  * Rewinds the stream. Only possible for continuous streams.
  *

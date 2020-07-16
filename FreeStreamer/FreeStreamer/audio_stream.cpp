@@ -307,7 +307,7 @@ void Audio_Stream::open(Input_Stream_Position *position)
         if (!m_preloading && config->startupWatchdogPeriod > 0) {
             pthread_mutex_unlock(&m_streamStateMutex);
             
-            createWatchdogTimer();
+//            createWatchdogTimer();
         } else {
             pthread_mutex_unlock(&m_streamStateMutex);
         }
@@ -404,6 +404,11 @@ void Audio_Stream::close(bool closeParser)
     pthread_mutex_unlock(&m_packetQueueMutex);
     
     AS_TRACE("%s: leave\n", __PRETTY_FUNCTION__);
+}
+    
+void Audio_Stream::resume()
+{
+    audioQueue()->resume();
 }
     
 void Audio_Stream::pause()
@@ -915,7 +920,7 @@ void Audio_Stream::audioQueueBuffersEmpty()
          */
         
         // Create the watchdog in case the input stream gets stuck
-        createWatchdogTimer();
+//        createWatchdogTimer();
         
         return;
     }
@@ -1145,7 +1150,7 @@ void Audio_Stream::streamEndEncountered()
     if (!(contentLength() > 0)) {
         /* Continuous streams are not supposed to end */
         
-        closeAndSignalError(AS_ERR_NETWORK, CFSTR("内容为空-HTTPErrorCode-3000"));
+        closeAndSignalError(AS_ERR_NETWORK, CFSTR("内容为空-AudioErrorCode-3000"));
         
         return;
     }
@@ -1156,11 +1161,6 @@ void Audio_Stream::streamEndEncountered()
         m_inputStream->close();
     }
     m_inputStreamRunning = false;
-}
-    
-bool Audio_Stream::streamHasDataCanPlay(){
-    bool canPlay = this->m_state == PLAYING || this->m_state == PAUSED;
-    return canPlay;
 }
 
 void Audio_Stream::streamErrorOccurred(CFStringRef errorDesc)
@@ -1283,8 +1283,13 @@ void Audio_Stream::closeAndSignalError(int errorCode, CFStringRef errorDescripti
     setState(FAILED);
     close(true);
     
+    CFStringRef msg = CFStringCreateWithFormat (kCFAllocatorDefault, NULL, CFSTR("%@-HTTPStatusCode-%ld"), errorDescription, m_inputStream->attachErrorCode());
+    
     if (m_delegate) {
-        m_delegate->audioStreamErrorOccurred(errorCode, errorDescription);
+        m_delegate->audioStreamErrorOccurred(errorCode, msg);
+    }
+    if (msg) {
+        CFRelease(msg); msg = NULL;
     }
 }
     
@@ -1339,6 +1344,8 @@ void Audio_Stream::setState(State state)
     }
     
     m_state = state;
+    
+    m_inputStream->playStateChange(state == BUFFERING || state == SEEKING);
     
     pthread_mutex_unlock(&m_streamStateMutex);
     

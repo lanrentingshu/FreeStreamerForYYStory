@@ -44,7 +44,9 @@ public:
     void setContentType(CFStringRef contentType);
     size_t contentLength();
     
-    CFStringRef errorDescription();
+    long attachErrorCode();
+    void netWorkChange(Input_Stream_Network status);
+    void playStateChange(bool isBuffer);
     
     bool open();
     bool open(const Input_Stream_Position& position);

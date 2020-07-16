@@ -49,6 +49,11 @@ private:
     bool m_icyHeadersParsed;
     
     CFStringRef m_icyName;
+    long m_httpStatusCode;
+    pthread_mutex_t m_mutex;
+    bool m_canPlay;
+    Input_Stream_Network m_networkStatus;
+    pthread_mutex_t m_status_mutex;
     
     std::vector<CFStringRef> m_icyHeaderLines;
     size_t m_icyMetaDataInterval;
@@ -71,6 +76,8 @@ private:
     static void readCallBack(CFReadStreamRef stream, CFStreamEventType eventType, void *clientCallBackInfo);
     static void openTimerCallback(CFRunLoopTimerRef timer, void *info);
     
+    bool canPlay();
+    bool reOpen();
     void startOpenTimer(CFTimeInterval interval);  //start open timer
     void stopOpenTimer();                         //invalidate timer
     void close(bool resetTimer);                   //close stream if need invalidate timer
@@ -84,7 +91,9 @@ public:
     
     CFStringRef contentType();
     size_t contentLength();
-    CFStringRef errorDescription();    // access error
+    long attachErrorCode();    // access error
+    void netWorkChange(Input_Stream_Network status);
+    void playStateChange(bool isBuffer);
     
     bool open();
     bool open(const Input_Stream_Position& position);

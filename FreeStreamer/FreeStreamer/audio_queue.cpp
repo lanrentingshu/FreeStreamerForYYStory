@@ -63,6 +63,10 @@ Audio_Queue::Audio_Queue()
         AQ_TRACE("m_mutex init failed!\n");
     }
     
+    if (pthread_mutex_init(&m_state_mutex, NULL) != 0) {
+        AQ_TRACE("m_state_mutex init failed!\n");
+    }
+    
     if (pthread_mutex_init(&m_bufferInUseMutex, NULL) != 0) {
         AQ_TRACE("m_bufferInUseMutex init failed!\n");
     }
@@ -83,6 +87,7 @@ Audio_Queue::~Audio_Queue()
     delete [] m_bufferInUse;
     
     pthread_mutex_destroy(&m_mutex);
+    pthread_mutex_destroy(&m_state_mutex);
     pthread_mutex_destroy(&m_bufferInUseMutex);
     pthread_cond_destroy(&m_bufferFreeCondition);
 }
@@ -94,8 +99,15 @@ bool Audio_Queue::initialized()
     
 void Audio_Queue::start()
 {
+    pthread_mutex_lock(&m_state_mutex);
     // start the queue if it has not been started already
     if (m_audioQueueStarted) {
+        pthread_mutex_unlock(&m_state_mutex);
+        return;
+    }
+    
+    if(m_state == PAUSED) {
+        pthread_mutex_unlock(&m_state_mutex);
         return;
     }
             
@@ -108,19 +120,37 @@ void Audio_Queue::start()
         AQ_TRACE("%s: AudioQueueStart failed!\n", __PRETTY_FUNCTION__);
         m_lastError = err;
     }
+    pthread_mutex_unlock(&m_state_mutex);
+}
+    
+void Audio_Queue::resume()
+{
+    pthread_mutex_lock(&m_state_mutex);
+    if(m_outAQ) {
+        OSStatus err = AudioQueueStart(m_outAQ, NULL);
+        if (!err) {
+            m_audioQueueStarted = true;
+            m_levelMeteringEnabled = false;
+            m_lastError = noErr;
+        } else {
+            AQ_TRACE("%s: AudioQueueStart failed!\n", __PRETTY_FUNCTION__);
+            m_lastError = err;
+        }
+    }
+    setState(RUNNING);
+    pthread_mutex_unlock(&m_state_mutex);
 }
     
 void Audio_Queue::pause()
 {
-    if (m_state == RUNNING) {
+    pthread_mutex_lock(&m_state_mutex);
+    if(m_outAQ) {
         if (AudioQueuePause(m_outAQ) != 0) {
             AQ_TRACE("%s: AudioQueuePause failed!\n", __PRETTY_FUNCTION__);
         }
-        setState(PAUSED);
-    } else if (m_state == PAUSED) {
-        AudioQueueStart(m_outAQ, NULL);
-        setState(RUNNING);
     }
+    setState(PAUSED);
+    pthread_mutex_unlock(&m_state_mutex);
 }
     
 void Audio_Queue::stop()
@@ -180,10 +210,11 @@ void Audio_Queue::setPlayRate(float playRate)
 
 void Audio_Queue::stop(bool stopImmediately)
 {
-    if (!m_audioQueueStarted) {
-        AQ_TRACE("%s: audio queue already stopped, return!\n", __PRETTY_FUNCTION__);
-        return;
-    }
+//    if (!m_audioQueueStarted) {
+//        AQ_TRACE("%s: audio queue already stopped, return!\n", __PRETTY_FUNCTION__);
+//        return;
+//    }
+    pthread_mutex_lock(&m_state_mutex);
     m_audioQueueStarted = false;
     m_levelMeteringEnabled = false;
     
@@ -214,6 +245,8 @@ void Audio_Queue::stop(bool stopImmediately)
     }
     
     AQ_TRACE("%s: leave\n", __PRETTY_FUNCTION__);
+    
+    pthread_mutex_unlock(&m_state_mutex);
 }
     
 AudioTimeStamp Audio_Queue::currentTime()
@@ -392,9 +425,10 @@ void Audio_Queue::handleAudioPackets(UInt32 inNumberBytes, UInt32 inNumberPacket
     
 void Audio_Queue::cleanup()
 {
+    pthread_mutex_lock(&m_state_mutex);
     if (!initialized()) {
         AQ_TRACE("%s: warning: attempt to cleanup an uninitialized audio queue. return.\n", __PRETTY_FUNCTION__);
-        
+        pthread_mutex_unlock(&m_state_mutex);
         return;
     }
     
@@ -424,6 +458,7 @@ void Audio_Queue::cleanup()
     }
     
     m_lastError = noErr;
+    pthread_mutex_unlock(&m_state_mutex);
 }
     
 void Audio_Queue::setState(State state)
@@ -562,12 +597,14 @@ void Audio_Queue::audioQueueIsRunningCallback(void *inClientData, AudioQueueRef 
         AQ_TRACE("%s: error in kAudioQueueProperty_IsRunning\n", __PRETTY_FUNCTION__);
         return;
     }
+    pthread_mutex_lock(&audioQueue->m_state_mutex);
     if (running) {
         AQ_TRACE("audio queue running!\n");
         audioQueue->setState(RUNNING);
     } else {
         audioQueue->setState(IDLE);
     }
+    pthread_mutex_unlock(&audioQueue->m_state_mutex);
 }    
     
 } // namespace astreamer

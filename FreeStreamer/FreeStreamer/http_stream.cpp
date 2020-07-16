@@ -10,6 +10,7 @@
 #include "audio_queue.h"
 #include "id3_parser.h"
 #include "stream_configuration.h"
+#include <pthread.h>
 
 //#define HS_DEBUG 1
 
@@ -53,6 +54,9 @@ HTTP_Stream::HTTP_Stream() :
     m_icyHeadersParsed(false),
     
     m_icyName(0),
+    m_httpStatusCode(0),
+    m_networkStatus(AS_NET_UNKNOW),
+    m_canPlay(false),
     
     m_icyMetaDataInterval(0),
     m_dataByteReadCount(0),
@@ -63,6 +67,8 @@ HTTP_Stream::HTTP_Stream() :
     
     m_id3Parser(new ID3_Parser())
 {
+    pthread_mutex_init(&m_mutex, NULL);
+    pthread_mutex_init(&m_status_mutex, NULL);
     m_id3Parser->m_delegate = this;
 }
 
@@ -95,6 +101,9 @@ HTTP_Stream::~HTTP_Stream()
     }
     
     delete m_id3Parser; m_id3Parser = 0;
+    
+    pthread_mutex_destroy(&m_mutex);
+    pthread_mutex_destroy(&m_status_mutex);
 }
     
 Input_Stream_Position HTTP_Stream::position()
@@ -112,9 +121,39 @@ size_t HTTP_Stream::contentLength()
     return m_contentLength;
 }
     
-CFStringRef HTTP_Stream::errorDescription()
+long HTTP_Stream::attachErrorCode()
 {
-    return NULL;
+    pthread_mutex_lock(&m_mutex);
+    long code = m_httpStatusCode;
+    pthread_mutex_unlock(&m_mutex);
+    return code;
+}
+
+void HTTP_Stream::netWorkChange(Input_Stream_Network status)
+{
+    m_networkStatus = status;
+}
+    
+void HTTP_Stream::playStateChange(bool isBuffer)
+{
+    Stream_Configuration *config = Stream_Configuration::configuration();
+    pthread_mutex_lock(&m_status_mutex);
+    m_canPlay = !isBuffer;
+    pthread_mutex_unlock(&m_status_mutex);
+    
+    if (isBuffer && m_openTimer) {
+        reOpen();
+        startOpenTimer(config->startReadDataTimeout);
+    }
+}
+    
+bool HTTP_Stream::canPlay()
+{
+    bool canPlay = false;
+    pthread_mutex_lock(&m_status_mutex);
+    canPlay = m_canPlay;
+    pthread_mutex_unlock(&m_status_mutex);
+    return canPlay;
 }
     
 bool HTTP_Stream::open()
@@ -129,6 +168,20 @@ bool HTTP_Stream::open()
 #endif
     
     return open(position);
+}
+
+bool HTTP_Stream::reOpen()
+{
+    /* reopen from the error position */
+    if ( m_position.end >= m_position.start+m_bytesRead) {
+        HS_TRACE("reopen debug: try reopen from HTTP stream error.\n");
+        Input_Stream_Position errorPosition;
+        errorPosition.start = m_position.start+m_bytesRead;
+        errorPosition.end = m_position.end;
+        return open(errorPosition);
+    } else {
+        return open();
+    }
 }
 
 bool HTTP_Stream::open(const Input_Stream_Position& position)
@@ -183,7 +236,8 @@ bool HTTP_Stream::open(const Input_Stream_Position& position)
         goto out;
     }
     
-    if (!CFReadStreamSetClient(m_readStream, kCFStreamEventHasBytesAvailable |
+    if (!CFReadStreamSetClient(m_readStream, kCFStreamEventOpenCompleted |
+                                             kCFStreamEventHasBytesAvailable |
 	                                         kCFStreamEventEndEncountered |
 	                                         kCFStreamEventErrorOccurred, readCallBack, &CTX)) {
         CFRelease(m_readStream); m_readStream = 0;
@@ -215,18 +269,17 @@ out:
     
 void HTTP_Stream::openTimerCallback(CFRunLoopTimerRef timer, void *info)
 {
+    Stream_Configuration *config = Stream_Configuration::configuration();
+    
     HTTP_Stream *THIS = (HTTP_Stream *)info;
     
-    THIS->stopOpenTimer();
-    
-    THIS->close(true);
-    
-    CFStringRef reportedNetworkError = CFStringCreateCopy(kCFAllocatorDefault, CFSTR("超时错误-HTTPErrorCode-3998"));
     THIS->close();
-    THIS->m_delegate->streamErrorOccurred(reportedNetworkError);
-    if(reportedNetworkError) {
-        CFRelease(reportedNetworkError);
-        reportedNetworkError = NULL;
+    
+    if (THIS->canPlay()) {
+        THIS->reOpen();
+        THIS->startOpenTimer(config->startReadDataTimeout);
+    } else {
+        THIS->m_delegate->streamErrorOccurred(CFSTR("获取数据超时错误-AudioErrorCode-3998"));
     }
 }
 
@@ -285,6 +338,10 @@ void HTTP_Stream::handleStreamError()
         
         errorCode = CFErrorGetCode(streamError);
         
+        pthread_mutex_lock(&m_mutex);
+        m_httpStatusCode = errorCode;
+        pthread_mutex_unlock(&m_mutex);
+        
         CFStringRef errorDesc = CFErrorCopyDescription(streamError);
         
         if (errorDesc) {
@@ -298,16 +355,22 @@ void HTTP_Stream::handleStreamError()
         reportedNetworkError = CFStringCreateCopy(kCFAllocatorDefault, CFSTR("未知错误"));
     }
     
-    CFStringRef formatDesc = CFStringCreateWithFormat (kCFAllocatorDefault, NULL, CFSTR("%@-HTTPErrorCode-%ld"), reportedNetworkError, errorCode);
-    
     close();
-    m_delegate->streamErrorOccurred(formatDesc);
+    
+    if (errorCode >=100 && errorCode <= 599) {
+        m_delegate->streamErrorOccurred(reportedNetworkError);
+    } else {
+        if (canPlay()){
+            reOpen();
+            Stream_Configuration *config = Stream_Configuration::configuration();
+            startOpenTimer(config->startReadDataTimeout);
+        } else {
+            m_delegate->streamErrorOccurred(reportedNetworkError);
+        }
+    }
     
     if (reportedNetworkError) {
         CFRelease(reportedNetworkError); reportedNetworkError = NULL;
-    }
-    if (formatDesc) {
-        CFRelease(formatDesc); formatDesc = NULL;
     }
 }
     
@@ -611,16 +674,8 @@ void HTTP_Stream::parseHttpHeadersIfNeeded(const UInt8 *buf, const CFIndex bufSi
         m_delegate->streamIsReadyRead();
     } else {
         if (m_delegate) {
-            CFStringRef statusCodeString = CFStringCreateWithFormat(NULL,
-                                                                    NULL,
-                                                                    CFSTR("parseHttpHeader-HTTPErrorCode-%d"),
-                                                                    (unsigned int)statusCode);
             close();
-            m_delegate->streamErrorOccurred(statusCodeString);
-            
-            if (statusCodeString) {
-                CFRelease(statusCodeString);
-            }
+            m_delegate->streamErrorOccurred(CFSTR("parseHttpHeaderError"));
         }
     }
 }
@@ -880,6 +935,20 @@ void HTTP_Stream::readCallBack(CFReadStreamRef stream, CFStreamEventType eventTy
     CFStringRef reportedNetworkError = NULL;
     
     switch (eventType) {
+        case kCFStreamEventOpenCompleted: {
+            
+            CFHTTPMessageRef response = (CFHTTPMessageRef)CFReadStreamCopyProperty(stream, kCFStreamPropertyHTTPResponseHeader);
+            if (response) {
+                CFIndex statusCode = CFHTTPMessageGetResponseStatusCode(response);
+                pthread_mutex_lock(&THIS->m_mutex);
+                THIS->m_httpStatusCode = statusCode;
+                pthread_mutex_unlock(&THIS->m_mutex);
+                CFRelease(response);
+            }
+            
+            THIS->startOpenTimer(config->continueReadDataTimeout);
+            break;
+        }
         case kCFStreamEventHasBytesAvailable: {
             
             THIS->startOpenTimer(config->continueReadDataTimeout);
@@ -900,6 +969,15 @@ void HTTP_Stream::readCallBack(CFReadStreamRef stream, CFStreamEventType eventTy
                      */
                     THIS->m_readPending = true;
                     break;
+                }
+                
+                CFHTTPMessageRef response = (CFHTTPMessageRef)CFReadStreamCopyProperty(stream, kCFStreamPropertyHTTPResponseHeader);
+                if (response) {
+                    CFIndex statusCode = CFHTTPMessageGetResponseStatusCode(response);
+                    pthread_mutex_lock(&THIS->m_mutex);
+                    THIS->m_httpStatusCode = statusCode;
+                    pthread_mutex_unlock(&THIS->m_mutex);
+                    CFRelease(response);
                 }
                 
                 CFIndex bytesRead = CFReadStreamRead(stream, THIS->m_httpReadBuffer, config->httpConnectionBufferSize);

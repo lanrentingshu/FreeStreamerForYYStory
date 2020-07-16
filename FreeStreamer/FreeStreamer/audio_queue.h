@@ -37,6 +37,7 @@ public:
     void handleAudioPackets(UInt32 inNumberBytes, UInt32 inNumberPackets, const void *inInputData, AudioStreamPacketDescription *inPacketDescriptions);
     
     void start();
+    void resume();
     void pause();
     void stop(bool stopImmediately);
     void stop();
@@ -73,6 +74,8 @@ private:
     bool m_levelMeteringEnabled;
     
     pthread_mutex_t m_mutex;
+    
+    pthread_mutex_t m_state_mutex;
     
     pthread_mutex_t m_bufferInUseMutex;
     pthread_cond_t m_bufferFreeCondition;

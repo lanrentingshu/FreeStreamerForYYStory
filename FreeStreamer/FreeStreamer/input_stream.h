@@ -15,6 +15,13 @@ namespace astreamer {
 
 class Input_Stream_Delegate;
     
+enum Input_Stream_Network {
+    AS_NET_NONE = 0,
+    AS_NET_WIFI = 2,
+    AS_NET_WWAN = 1,
+    AS_NET_UNKNOW = 3
+};
+    
 struct Input_Stream_Position {
     UInt64 start;
     UInt64 end;
@@ -32,7 +39,9 @@ public:
     virtual CFStringRef contentType() = 0;
     virtual size_t contentLength() = 0;
     
-    virtual CFStringRef errorDescription() = 0;  // access input stream error
+    virtual long attachErrorCode() = 0;  // access input stream error
+    virtual void netWorkChange(Input_Stream_Network status) = 0;
+    virtual void playStateChange(bool isBuffer) = 0;
     
     virtual bool open() = 0;
     virtual bool open(const Input_Stream_Position& position) = 0;
@@ -48,9 +57,6 @@ public:
     virtual void streamIsReadyRead() = 0;
     virtual void streamHasBytesAvailable(UInt8 *data, UInt32 numBytes) = 0;
     virtual void streamEndEncountered() = 0;
-    
-    // check input stream delegte is able play or not
-    virtual bool streamHasDataCanPlay() = 0;
     virtual void streamErrorOccurred(CFStringRef errorDesc) = 0;
     virtual void streamMetaDataAvailable(std::map<CFStringRef,CFStringRef> metaData) = 0;
     virtual void streamMetaDataByteSizeAvailable(UInt32 sizeInBytes) = 0;

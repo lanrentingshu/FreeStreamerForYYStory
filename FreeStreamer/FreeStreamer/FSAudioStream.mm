@@ -96,7 +96,7 @@ static NSInteger sortCacheObjects(id co1, id co2, void *keyForSorting)
         self.proxyHost = @"";
         self.proxyPort = @(0);
         self.startReadDataTimeout = 15;
-        self.continueReadDataTimeout = 20;
+        self.continueReadDataTimeout = 45;
         self.userAgent = [NSString stringWithFormat:@"FreeStreamer/%@ (%@)", freeStreamerReleaseVersion(), systemVersion];
         self.cacheEnabled = YES;
         self.seekingFromCacheEnabled = YES;
@@ -322,6 +322,18 @@ public:
                                                  selector:@selector(reachabilityChanged:)
                                                      name:kReachabilityChangedNotification
                                                    object:nil];
+        
+        
+
+        if (!_reachability) {
+            _reachability = [Reachability reachabilityForInternetConnection];
+            
+            [_reachability startNotifier];
+        }
+        
+        if (_audioStream && _audioStream->m_inputStream) {
+            _audioStream->m_inputStream->netWorkChange((astreamer::Input_Stream_Network) [_reachability currentReachabilityStatus]);
+        }
 
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= 40000)
         _backgroundTask = UIBackgroundTaskInvalid;
@@ -741,6 +753,11 @@ public:
     NetworkStatus netStatus = [reach currentReachabilityStatus];
     self.internetConnectionAvailable = (netStatus == ReachableViaWiFi || netStatus == ReachableViaWWAN);
     
+    if (_audioStream && _audioStream->m_inputStream ) {
+        _audioStream->m_inputStream->netWorkChange((astreamer::Input_Stream_Network) netStatus);
+    }
+    
+    
     if ([self isPlaying] && !self.internetConnectionAvailable) {
         self.wasDisconnected = YES;
         
@@ -759,9 +776,9 @@ public:
             If audio stream still has data can be play, error was not throwed.
             Than do not attemp to restart. HTTP stream will try to reopen itself.
         */
-        if (!_audioStream->streamHasDataCanPlay()) {
-            [self attemptRestart];
-        }
+//        if (!_audioStream->streamNetWorkStatus()) {
+//            [self attemptRestart];
+//        }
     }
 }
 
@@ -1067,6 +1084,11 @@ public:
     
     return (currentState == astreamer::Audio_Stream::PLAYING ||
             currentState == astreamer::Audio_Stream::END_OF_FILE);
+}
+
+- (void)resume
+{
+    _audioStream->resume();
 }
 
 - (void)pause
@@ -1471,6 +1493,13 @@ public:
     NSAssert([NSThread isMainThread], @"FSAudioStream.stop needs to be called in the main thread");
     
     [_private stop];
+}
+
+- (void)resume
+{
+    NSAssert([NSThread isMainThread], @"FSAudioStream.pause needs to be called in the main thread");
+    
+    [_private resume];
 }
 
 - (void)pause

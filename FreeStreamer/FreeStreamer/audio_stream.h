@@ -46,6 +46,7 @@ class File_Output;
 class Audio_Stream : public Input_Stream_Delegate, public Audio_Queue_Delegate {
 public:
     Audio_Stream_Delegate *m_delegate;
+    Input_Stream *m_inputStream;
     
     enum State {
         STOPPED,
@@ -65,6 +66,7 @@ public:
     void open(Input_Stream_Position *position);
     void close(bool closeParser);
     void pause();
+    void resume();
     void rewind(unsigned seconds);
     
     void startCachedDataPlayback();
@@ -120,7 +122,6 @@ public:
     void streamIsReadyRead();
     void streamHasBytesAvailable(UInt8 *data, UInt32 numBytes);
     void streamEndEncountered();
-    bool streamHasDataCanPlay();
     void streamErrorOccurred(CFStringRef errorDesc);
     void streamMetaDataAvailable(std::map<CFStringRef,CFStringRef> metaData);
     void streamMetaDataByteSizeAvailable(UInt32 sizeInBytes);
@@ -146,7 +147,6 @@ private:
     AS_Playback_Position m_currentPlaybackPosition; /* record where it has played to */
     
     State m_state;
-    Input_Stream *m_inputStream;
     Audio_Queue *m_audioQueue;
     
     CFRunLoopTimerRef m_watchdogTimer;
