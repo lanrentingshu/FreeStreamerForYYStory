@@ -281,6 +281,7 @@ void Audio_Stream::open(Input_Stream_Position *position)
         m_initialBufferingCompleted = false;
         
         if (m_inputStream) {
+            m_inputStream->close();
             success = m_inputStream->open(*position);
         }
     } else {
@@ -291,6 +292,7 @@ void Audio_Stream::open(Input_Stream_Position *position)
         m_packetIdentifier = 0;
         
         if (m_inputStream) {
+            m_inputStream->close();
             success = m_inputStream->open();
         }
     }
@@ -836,7 +838,10 @@ void Audio_Stream::audioQueueBuffersEmpty()
         Stream_Configuration *config = Stream_Configuration::configuration();
         
         pthread_mutex_lock(&m_packetQueueMutex);
-        m_playPacket = m_queuedHead;
+        
+        // don't need put m_playPacket to m_queuedHead
+//        m_playPacket = m_queuedHead;
+        
         if (m_processedPackets.size() > 0) {
             /*
              * We have audio packets in memory (only case with a non-continuous stream),
@@ -846,14 +851,19 @@ void Audio_Stream::audioQueueBuffersEmpty()
              */
             queued_packet_t *firstPacket = m_processedPackets.front();
             queued_packet_t *cur = m_queuedHead;
+            queued_packet_t *curButNotLast = 0;
             while (cur) {
                 if (cur->identifier == firstPacket->identifier) {
+                    /* if not the last packet , let it be m_playPacket */
+                    if (cur->next) {
+                        curButNotLast = cur;
+                    }
                     break;
                 }
                 cur = cur->next;
             }
-            if (cur) {
-                m_playPacket = cur;
+            if (curButNotLast) {
+                m_playPacket = curButNotLast;
             }
         }
         pthread_mutex_unlock(&m_packetQueueMutex);
